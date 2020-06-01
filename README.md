@@ -57,7 +57,7 @@ The required data are stored as *.pt file, and each record includes the followin
 We use a dictionary to store the training, validation, and test data.
 The division are maintained the same for all the baselines as well.
 
-### `*_organized.pt` & `*_organized_nb.pt`
+### `*_organized_nb.pt`
 
 ```python
 data_dict = {
