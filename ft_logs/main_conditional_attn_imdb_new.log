@@ -1,0 +1,2 @@
+lr, 0.02, hidden, 128, c2, 0.1, c3, 0.1, c4, 0.1, n_high, 1 validation_accu, 0.7996, test_accu, 0.8176
+lr, 0.02, hidden, 128, c2, 0.1, c3, 0.1, c4, 0.1, n_high, 1 validation_accu, 0.7996, test_accu, 0.8176
