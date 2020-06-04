@@ -1,3 +1,9 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+learn a fixed score from DL and apply to DU
+"""
+
 import argparse
 
 import torch.optim as optim
@@ -7,7 +13,7 @@ import os
 import copy
 from tqdm.auto import tqdm
 from core_conditional_attn.Model import AssembleModel
-from core_conditional_attn.TrainFunc import train, test
+from core_conditional_attn.TrainFunc import train, test, val
 from core_conditional_attn.Data import data_load, save_log
 
 def set_seed_everywhere(seed, cuda):
@@ -24,16 +30,16 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--pt_file', type=str, default=None,
                         help='full dataset location.')
-    parser.add_argument('--ds', type=str, required=True,
+    parser.add_argument('--ds', type=str, required=False, default='youtube',
                         choices=['youtube', 'imdb', 'yelp', 'agnews', 'spouse'],
                         help='dataset indicator.')
-    parser.add_argument('--no_cuda', action='store_true', default=False,
+    parser.add_argument('--no_cuda', action='store_true', default=True,
                         help='ban cuda devices.')
-    parser.add_argument('--fast_mode', action='store_true', default=False,
+    parser.add_argument('--fast_mode', action='store_true', default=True,
                         help='Validate during training pass.')
     parser.add_argument('--seed', type=int, default=0,
                         help='random seed.')
-    parser.add_argument('--epoch', type=int, default=500,
+    parser.add_argument('--epoch', type=int, default=500, #TODO
                         help='number of training epochs.')
     parser.add_argument('--lr', type=float, default=0.02,
                         help='learning rate.')
@@ -42,7 +48,8 @@ def parse_args():
                         help='network hidden size.')
     parser.add_argument('--c2', type=float, default=0.1)
     parser.add_argument('--c3', type=float, default=0.1)
-    parser.add_argument('--c4', type=float, default=0.1)
+    parser.add_argument('--c4', type=float, default=0.1) # no use
+    parser.add_argument('--c5', type=float, default=0.1) # no use
     parser.add_argument('--k', type=float, default=0.1)
     parser.add_argument('--x0', type=int, default=50)
     parser.add_argument('--unlabeled_ratio', type=float, default=0.8)
@@ -53,6 +60,10 @@ def parse_args():
         'ft_logs', file_name
     ))
     parser.add_argument('--n_high_cov', type=int, default=1)
+    parser.add_argument('--self_train', type=bool, default=True)
+    parser.add_argument('--test_score', type=int, default=0,
+                        help='0: high, 1: atten, 2: bert')
+
     args = parser.parse_args()
 
     # manipulate arguments
@@ -63,13 +74,22 @@ def parse_args():
         args.log_prefix = None
     else:
         args.log_prefix += '_{}.log'.format(args.ds)
-    args.ft_log += '_{}_new.log'.format(args.ds)
+    args.ft_log += '_{}_old.log'.format(args.ds)
     args.num_class = 2
+    if args.ds == 'agnews':
+        args.num_class = 4
+
+    #TDOO: one time running
+    # args.lr = 0.02
+    # args.hidden = 128
+    # args.c2 = 0.2 # in paper, it is c1
+    # args.c3 = 0.1
+    # args.n_high_cov = 2
+    #---END---
 
     print(args)
 
     return args
-
 
 def main():
     args = parse_args()
@@ -85,13 +105,15 @@ def main():
     print('Data loaded from pt file!')
 
     print(' -------- ')
-    print('lr: {}, hidden: {}, c2: {}, c3: {}'.format(args.lr, args.hidden, args.c2, args.c3))
+    print('lr: {}, hidden: {}, c2: {}, c3: {}, c4: {}, c5: {}'.format(args.lr, args.hidden, args.c2, args.c3, args.c4, args.c5))
     model = AssembleModel(
         n_features=n_features,
         n_rules=n_rules,
         d_hid=args.hidden,
         n_class=args.num_class
     ).to(device)
+
+    # print(sum(p.numel() for p in model.parameters() if p.requires_grad))
 
     optimizer = optim.Adam(
         model.parameters(), lr=args.lr, weight_decay=args.weight_decay
@@ -111,6 +133,7 @@ def main():
     pred_y_l_new = y_l.clone()
     for epoch in tqdm(range(args.epoch)):
         fix_score, train_metrics, pred_y_l_new, z = train(
+            args,
             epoch=epoch,
             model=model,
             optimizer=optimizer,
@@ -125,12 +148,13 @@ def main():
             x0=args.x0,
             c2=args.c2,
             c3=args.c3,
-            c4=args.c4
+            c4=args.c4,
+            c5=args.c5
         )
         train_metrics_list.append(train_metrics)
 
         val_accu, val_accu_fc, val_accu_attn = test(
-            model, validation_set, fix_score, device, n_class=args.num_class
+            args, model, validation_set, fix_score, device, n_class=args.num_class
         )
         val_metrics_list.append([val_accu, val_accu_fc, val_accu_attn])
 
@@ -142,7 +166,7 @@ def main():
     print('[validation] best accuracy: {}'.format(best_accu))
     model.load_state_dict(best_model_wts)
     test_accu, test_accu_fc, test_accu_attn = test(
-        model, testing_set, best_fix_score, device, n_class=args.num_class
+        args, model, testing_set, best_fix_score, device, n_class=args.num_class
     )
     test_metrics = (test_accu, test_accu_fc, test_accu_attn)
     print('[test] accuracy: {:.4f}, attention accuracy: {:.4f},'
@@ -150,22 +174,22 @@ def main():
 
     if args.log_prefix:
         save_log(args.log_prefix, train_metrics_list, val_metrics_list, test_metrics,
-                 args.lr, args.hidden, args.c2, args.c3, args.c4)
+                 args.lr, args.hidden, args.c2, args.c3)
 
     with open(args.ft_log, 'a', encoding='utf-8') as f:
-        f.write('lr, {}, hidden, {}, c2, {}, c3, {}, c4, {}, n_high, {} '
+        f.write('lr, {}, hidden, {}, c2, {}, c3, {}, c4, {}, c5, {}, n_high, {}, test_score, {} '
                 'validation_accu, {:.4f}, test_accu, {:.4f}\n'
-                .format(args.lr, args.hidden, args.c2, args.c3, args.c4, args.n_high_cov, best_accu, test_accu)
+                .format(args.lr, args.hidden, args.c2, args.c3, args.c4, args.c5, args.n_high_cov, args.test_score,
+                        best_accu, test_accu)
                 )
 
     file_name = '.'.join(os.path.basename(__file__).split('.')[:-1])
     torch.save({
         'state_dict': model.state_dict,
         'fix_score': best_fix_score
-    }, 'model/model_{}_{}_{}_{}_{}_{}_{}.cpk'.format(
-        file_name, args.ds, args.lr, args.hidden, args.c2, args.c3, args.c4
+    }, 'model/model_{}_{}_{}_{}_{}_{}.cpk'.format(
+        file_name, args.ds, args.lr, args.hidden, args.c2, args.c3
     ))
-
 
 if __name__ == '__main__':
     main()

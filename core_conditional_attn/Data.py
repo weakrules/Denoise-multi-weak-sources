@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import torch
 import numpy as np
 
@@ -60,6 +62,7 @@ def data_load(data_file, n_high_cov):
 
     y_v = validation['label'].long()
     y_t = test['label'].long()
+    y_t_major = test['major_label'].long()
 
     training_set = (x_u, x_l, y_u, y_l, x_lf_u, x_lf_l, y_u_gt, y_l_gt)
     validation_set = (x_v, y_v, x_lf_v)
@@ -71,8 +74,8 @@ def data_load(data_file, n_high_cov):
     return training_set, validation_set, test_set, n_features, n_rules, no_cover_ids, y_l
 
 
-def save_log(log_prefix, train_metrics_list, val_metrics_list, test_metrics, lr, hidden, c2, c3, c4):
-    log_name = log_prefix + '_{}_{}_{}_{}.log'.format(lr, hidden, c2, c3, c4)
+def save_log(log_prefix, train_metrics_list, val_metrics_list, test_metrics, lr, hidden, c2, c3):
+    log_name = log_prefix + '_{}_{}_{}_{}.log'.format(lr, hidden, c2, c3)
     with open(log_name, 'w') as f:
         f.write('training supervised accuracy;\t\ttraining supervised loss;\t\t'
                 'training supervised weight;\t\ttraining unsupervised accuracy;\t\t'

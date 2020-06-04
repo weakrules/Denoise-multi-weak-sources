@@ -25,13 +25,13 @@ usage: main_conditional_attn.py [-h] [--pt_file PT_FILE] --ds
                                 [--fast_mode] [--seed SEED] [--epoch EPOCH]
                                 [--lr LR] [--weight_decay WEIGHT_DECAY]
                                 [--hidden HIDDEN] [--c2 C2] [--c3 C3]
-                                [--c4 C4] [--k K] [--x0 X0]
+                                [--k K] [--x0 X0]
                                 [--unlabeled_ratio UNLABELED_RATIO]
                                 [--log_prefix LOG_PREFIX] [--ft_log FT_LOG]
                                 [--n_high_cov N_HIGH_COV]
 ```
 
-(2) sh run_conditional.sh
+(2) sh run.sh
 
 The trained model will be stored at the *model* folder. 
 

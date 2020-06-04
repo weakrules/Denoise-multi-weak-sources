@@ -1,11 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-# !pip install snorkel
-# from google.colab import drive
-# drive.mount('/content/drive/')
-# import os
-# os.chdir('drive/My Drive/dataset')
-
 import pandas as pd
 import io
 import re
@@ -26,16 +18,6 @@ from sklearn.feature_extraction.text import CountVectorizer
 #--------expression type LFs-------------
 number_keywords = 2
 def keyword_lookup(x, keywords, label):
-    # count = 0
-    
-    # for word in keywords:
-    #     for i in x.text.lower().split():
-    #         if(word == i):
-    #             count += 1
-    #             break
-    
-    # if(count >= number_keywords):
-    #     return label
     # print(x)
     if any(word in x.text.lower() for word in keywords):
         return label
@@ -129,64 +111,6 @@ Y_train = df.tag.values
 df_dev = df[['tag','text']].sample(10000, random_state = 3) # from the training
 Y_dev = df_dev.tag.values
 
-
-
-
-# keywords_pt = torch.load('key_words.pt')
-# textrank_keywords = torch.load('textrank_keywords.pt')
-
-# key1 = textrank_keywords['agnews_pol']
-# key2 = textrank_keywords['agnews_sp']
-# key3 = textrank_keywords['agnews_bus']
-# key4 = textrank_keywords['agnews_tech']
-
-    
-# keyword_politics = make_keyword_lf(keywords=keywords_pt['kw0'], label=politics)
-
-# keyword_sports =  make_keyword_lf(keywords=keywords_pt['kw1'], label=sports)
-
-# keyword_business_tfidf = make_keyword_lf(keywords=keywords_pt['kw2'], label=business)
-
-# keyword_technology_tfidf = make_keyword_lf(keywords=keywords_pt['kw3'], label=technology)
-
-# keyword_technology = make_keyword_lf(keywords=["tech", "digital", "internet", "mobile"], label=technology)
-
-# keyword_hardware = make_keyword_lf(keywords=["hardware", "computer", "telescope", "phone", "robot", "router", "chip", "pc", "processor", "wireless"], label=technology)
-
-# keyword_software = make_keyword_lf(keywords=["software", "ios", "os", "browser"], label=technology)
-
-# keyword_tech_org = make_keyword_lf(keywords=["google", "apple", "microsoft", "nasa", "amazon", "yahoo", "cisco", "intel", "dell", "oracle", "hp", "ibm", "siemens", "nokia", "motorola", "samsung", "toshiba", "sony"], label=technology)
-
-# keyword_business = make_keyword_lf(keywords=["business", "stock", "market", "industr", "trade", "sale", "financ", "goods", "retail"], label=business)
-
-# keyword_busi_company = make_keyword_lf(keywords=["delta", "cola", "fort", "toyota", "costco", "gucci"], label=business)
-
-# keyword_rank_pol = make_keyword_lf(keywords=key1, label=politics)
-
-# keyword_rank_sp = make_keyword_lf(keywords=key2, label=sports)
-
-# keyword_rank_bus = make_keyword_lf(keywords=key3, label=business)
-
-# keyword_rank_tech = make_keyword_lf(keywords=key4, label=technology)
-
-
-# lfs = [
-#     keyword_politics,
-#     keyword_sports,
-#     keyword_business_tfidf,
-#     keyword_technology_tfidf,
-#     keyword_technology,
-#     keyword_hardware,
-#     keyword_software,
-#     keyword_tech_org,
-#     keyword_business,
-#     keyword_busi_company]   
-# #     keyword_rank_pol,
-# #     keyword_rank_sp,
-# #     keyword_rank_bus,
-# #     keyword_rank_tech
-# # ]
-
 lfs = [keyword_r1,
         keyword_r2,
         keyword_r3,
@@ -203,37 +127,6 @@ L_dev = applier.apply(df=df_dev)
 print("LF_analysis")
 print(LFAnalysis(L=L_dev, lfs=lfs).lf_summary(Y=Y_dev))
 
-# from summa import keywords
-
-# agnews_pol = ""
-# agnews_sp = ""
-# agnews_bus = ""
-# agnews_tech = ""
-
-# for i in range(10000):
-#     if(df['tag'].astype(str)[i] == '1'):
-#         agnews_pol += df['text'].astype(str)[i]
-#     elif(df['tag'].astype(str)[i] == '2'):
-#         agnews_sp += df['text'].astype(str)[i]
-#     elif(df['tag'].astype(str)[i] == '3'):
-#         agnews_bus += df['text'].astype(str)[i]
-#     elif(df['tag'].astype(str)[i] == '4'):
-#         agnews_tech += df['text'].astype(str)[i]
-
-# key1 = keywords.keywords(agnews_pol, ratio=0.01, split=True)
-# key2 = keywords.keywords(agnews_sp, ratio=0.01, split=True)
-# key3 = keywords.keywords(agnews_bus, ratio=0.01, split=True)
-# key4 = keywords.keywords(agnews_tech, ratio=0.01, split=True)
-
-# textrank_keywords = {
-#     'agnews_pol': key1,
-#     'agnews_sp': key2,
-#     'agnews_bus': key3,
-#     'agnews_tech': key4
-#     }
-
-# (torch.save(textrank_keywords, 'textrank_keywords.pt'))
-
 # ------------- save ---------------- 
 df_train1["LF1"] = L_train[:,0]
 df_train1["LF2"] = L_train[:,1]
@@ -246,25 +139,3 @@ df_train1["LF8"] = L_train[:,7]
 df_train1["LF9"] = L_train[:,8]
 
 df_train1.to_csv("agnews_LF.csv")
-
-#--------train label model-------
-
-# label_model = LabelModel(cardinality=5, verbose=True)
-# label_model.fit(L_train=L_train, n_epochs=100, lr=0.01, seed=123)
-# probs_train = label_model.predict_proba(L=L_train)
-# preds_train = probs_to_preds(probs=probs_train)
-# print(label_model.score(L=L_train, Y=Y_train))
-
-# df_result = df[['tag']]
-# df_result['pred'] = preds_train
-# df_result.to_csv("agnews_snorkel.csv")
-
-# df_train_filtered, probs_train_filtered = filter_unlabeled_dataframe(
-#     X=df_train, y=probs_train, L=L_train
-# )
-# preds_train_filtered = probs_to_preds(probs=probs_train_filtered)
-# print(len(preds_train_filtered))
-
-# from google.colab import files
-# files.download('agnews_LF.csv')
-# files.download('agnews_snorkel.csv')
